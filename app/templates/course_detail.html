@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div>
+    <p class="eyebrow">Курс подготовки</p>
+    <h1>{{ course.title }}</h1>
+    <p class="lead">{{ course.description }}</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button secondary" href="/planner/{{ course.id }}">Открыть планировщик</a>
+    <a class="button ghost" href="/dashboard">Назад к панели</a>
+  </div>
+</section>
+
+<section class="metrics-row course-overview">
+  <article class="metric-box">
+    <span>Готовность курса</span>
+    <strong>{{ course_snapshot.readiness_percent }}%</strong>
+  </article>
+  <article class="metric-box">
+    <span>Средний результат тестов</span>
+    <strong>{{ course_snapshot.average_quiz_percent }}%</strong>
+  </article>
+  <article class="metric-box">
+    <span>Минут занятий</span>
+    <strong>{{ course_snapshot.total_study_minutes }}</strong>
+  </article>
+  <article class="metric-box">
+    <span>Следующая тема</span>
+    <strong>{{ course_snapshot.next_focus_topic_title or "Добавьте темы" }}</strong>
+  </article>
+</section>
+
+<section class="grid three cockpit-grid">
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Управление</p>
+        <h2>Быстрые действия</h2>
+      </div>
+    </div>
+    <div class="quick-links">
+      <a class="button secondary" href="{{ course_intelligence.next_action_href }}">Обновить план</a>
+      <a class="button ghost" href="#session-create-form">Записать сессию</a>
+      <a class="button ghost" href="#quiz-create-form">Добавить самопроверку</a>
+    </div>
+    <div class="note-card action-note">
+      <strong>{{ course_intelligence.next_action_title }}</strong>
+      <p>{{ course_intelligence.next_action_description }}</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Структура</p>
+        <h2>Распределение тем</h2>
+      </div>
+    </div>
+    <div class="distribution-list">
+      {% for slice in course_intelligence.status_distribution %}
+      <article class="distribution-row">
+        <div class="distribution-head">
+          <strong>{{ slice.label }}</strong>
+          <span>{{ slice.count }} · {{ slice.percent }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill {{ slice.tone }}-fill" style="width: {{ slice.percent }}%"></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ограничения</p>
+        <h2>Что мешает выйти на цель</h2>
+      </div>
+    </div>
+    <div class="stack-list compact">
+      {% for blocker in course_intelligence.blockers %}
+      <article class="note-card blocker-card {{ blocker.tone }}">
+        <strong>{{ blocker.title }}</strong>
+        <p>{{ blocker.detail }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Динамика</p>
+      <h2>Лента самопроверки</h2>
+    </div>
+  </div>
+  {% if course_intelligence.recent_quiz_trend %}
+  <div class="bar-chart trend-chart">
+    {% for point in course_intelligence.recent_quiz_trend %}
+    <article class="bar-column">
+      <div class="bar-track">
+        <div class="bar-fill accent-fill" style="height: {{ point.height_percent }}%"></div>
+      </div>
+      <strong>{{ point.value }}%</strong>
+      <small>{{ point.label }}</small>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <strong>Лента самопроверки пока пуста</strong>
+    <p>После первой проверки знаний здесь появится история результатов.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">База знаний</p>
+      <h2>Связанные заметки</h2>
+    </div>
+    <a class="button secondary" href="/notes?course_id={{ course.id }}">Открыть заметки курса</a>
+  </div>
+  <div class="stack-list compact">
+    {% for note in related_notes[:4] %}
+    <a class="note-card related-note tone-{{ note.color_tone }}" href="/notes?course_id={{ course.id }}&note_id={{ note.id }}">
+      <div class="course-card-top">
+        <strong>{{ note.title }}</strong>
+        {% if note.is_pinned %}
+        <span class="status-badge attention">Закреплено</span>
+        {% endif %}
+      </div>
+      <p>{{ note.body[:150] }}</p>
+      <div class="course-card-meta">
+        {% if note.topic %}
+        <span>{{ note.topic.title }}</span>
+        {% endif %}
+        <span>{{ note.updated_at.date() }}</span>
+      </div>
+    </a>
+    {% else %}
+    <div class="empty-state">
+      <strong>У курса пока нет заметок</strong>
+      <p>Откройте раздел заметок, чтобы зафиксировать инсайты, формулы и чек-листы по этому курсу.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="grid two">
+  <form id="course-update-form" class="panel form-panel" data-course-id="{{ course.id }}">
+    <h2>Редактировать курс</h2>
+    <label>Название
+      <input type="text" name="title" value="{{ course.title }}" minlength="2" required />
+    </label>
+    <label>Описание
+      <textarea name="description" minlength="2" required>{{ course.description }}</textarea>
+    </label>
+    <div class="field-row">
+      <label>Дата экзамена
+        <input type="date" name="exam_date" value="{{ course.exam_date.isoformat() }}" required />
+      </label>
+      <label>Целевой балл
+        <input type="number" name="target_score" min="1" max="100" value="{{ course.target_score }}" required />
+      </label>
+    </div>
+    <div class="field-row">
+      <label>Часов в неделю
+        <input type="number" name="weekly_hours_goal" min="1" max="80" value="{{ course.weekly_hours_goal }}" required />
+      </label>
+      <label>Цветовая тема
+        <input type="text" name="color_theme" value="{{ course.color_theme }}" required />
+      </label>
+    </div>
+    <div class="action-row">
+      <button class="button primary" type="submit">Сохранить изменения</button>
+      <button
+        class="button danger"
+        type="button"
+        data-delete-endpoint="/api/courses/{{ course.id }}"
+        data-redirect-url="/dashboard?message=%D0%9A%D1%83%D1%80%D1%81%20%D1%83%D0%B4%D0%B0%D0%BB%D1%91%D0%BD."
+        data-confirm-text="Удалить курс целиком?"
+      >
+        Удалить курс
+      </button>
+    </div>
+    <p class="form-status" data-form-status></p>
+  </form>
+
+  <form id="topic-create-form" class="panel form-panel" data-course-id="{{ course.id }}">
+    <h2>Добавить тему</h2>
+    <label>Название
+      <input type="text" name="title" minlength="2" required />
+    </label>
+    <label>Описание
+      <textarea name="description" minlength="2" required></textarea>
+    </label>
+    <div class="field-row">
+      <label>Сложность
+        <input type="number" name="difficulty" min="1" max="5" required />
+      </label>
+      <label>Важность
+        <input type="number" name="importance" min="1" max="5" required />
+      </label>
+      <label>Минут на изучение
+        <input type="number" name="estimated_minutes" min="15" max="1440" required />
+      </label>
+    </div>
+    <div class="field-row">
+      <label>Освоение
+        <input type="number" name="mastery_level" min="0" max="100" value="0" required />
+      </label>
+      <label>Статус
+        <select name="status">
+          <option value="planned">Запланировано</option>
+          <option value="in_progress">В процессе</option>
+          <option value="review">Повторение</option>
+          <option value="done">Завершено</option>
+        </select>
+      </label>
+    </div>
+    <button class="button primary" type="submit">Добавить тему</button>
+    <p class="form-status" data-form-status></p>
+  </form>
+
+  <section class="panel">
+    <h2>Темы</h2>
+    <div class="stack-list">
+      {% for topic in topics %}
+      <form class="topic-card topic-update-form" data-topic-id="{{ topic.id }}">
+        <div class="topic-head">
+          <strong>{{ topic.title }}</strong>
+          <span>{{ topic.mastery_level }}%</span>
+        </div>
+        <label>Название
+          <input type="text" name="title" value="{{ topic.title }}" minlength="2" required />
+        </label>
+        <label>Описание
+          <textarea name="description" minlength="2" required>{{ topic.description }}</textarea>
+        </label>
+        <div class="field-row">
+          <label>Сложность
+            <input type="number" name="difficulty" min="1" max="5" value="{{ topic.difficulty }}" required />
+          </label>
+          <label>Важность
+            <input type="number" name="importance" min="1" max="5" value="{{ topic.importance }}" required />
+          </label>
+          <label>Минут
+            <input type="number" name="estimated_minutes" min="15" max="1440" value="{{ topic.estimated_minutes }}" required />
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Освоение
+            <input type="number" name="mastery_level" min="0" max="100" value="{{ topic.mastery_level }}" required />
+          </label>
+          <label>Статус
+            <select name="status">
+              {% for status_key, status_label in topic_status_labels.items() %}
+              <option value="{{ status_key }}" {% if topic.status == status_key %}selected{% endif %}>{{ status_label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: {{ topic.mastery_level }}%"></div>
+        </div>
+        <small>{{ topic.status|topic_status_label }} · сложность {{ topic.difficulty }}/5 · важность {{ topic.importance }}/5</small>
+        <div class="action-row">
+          <button class="button secondary" type="submit">Сохранить тему</button>
+          <button
+            class="button danger"
+            type="button"
+            data-delete-endpoint="/api/topics/{{ topic.id }}"
+            data-redirect-url="/courses/{{ course.id }}?message=%D0%A2%D0%B5%D0%BC%D0%B0%20%D1%83%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B0."
+            data-confirm-text="Удалить тему?"
+          >
+            Удалить тему
+          </button>
+        </div>
+        <p class="form-status" data-form-status></p>
+      </form>
+      {% else %}
+      <div class="empty-state">
+        <strong>Тем пока нет</strong>
+        <p>Добавьте темы, чтобы открыть сессии, самопроверку и планирование.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+
+<section class="grid three">
+  {% if topics %}
+  <form id="session-create-form" class="panel form-panel">
+    <h2>Записать учебную сессию</h2>
+    <label>Тема
+      <select name="topic_id">
+        {% for topic in topics %}
+        <option value="{{ topic.id }}">{{ topic.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Дата
+      <input type="date" name="planned_for" required />
+    </label>
+    <div class="field-row">
+      <label>Минут
+        <input type="number" name="actual_minutes" min="0" max="720" required />
+      </label>
+      <label>Фокус
+        <input type="number" name="focus_score" min="1" max="10" required />
+      </label>
+    </div>
+    <label>Заметки
+      <textarea name="notes" minlength="2" required></textarea>
+    </label>
+    <button class="button secondary" type="submit">Сохранить сессию</button>
+    <p class="form-status" data-form-status></p>
+    <div class="stack-list compact">
+      {% for session in study_sessions[:4] %}
+      <article class="note-card">
+        <p>{{ session.planned_for }} · {{ session.actual_minutes }} мин · фокус {{ session.focus_score }}/10</p>
+        <small>{{ session.notes }}</small>
+        <button
+          class="button ghost compact-button"
+          type="button"
+          data-delete-endpoint="/api/sessions/{{ session.id }}"
+          data-redirect-url="/courses/{{ course.id }}?message=%D0%A1%D0%B5%D1%81%D1%81%D0%B8%D1%8F%20%D1%83%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B0."
+          data-confirm-text="Удалить сессию?"
+        >
+          Удалить сессию
+        </button>
+      </article>
+      {% else %}
+      <div class="empty-state">
+        <strong>Сессий пока нет</strong>
+        <p>Здесь появятся ваши учебные блоки после первого сохранения.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+
+  <form id="quiz-create-form" class="panel form-panel">
+    <h2>Добавить самопроверку</h2>
+    <label>Тема
+      <select name="topic_id">
+        {% for topic in topics %}
+        <option value="{{ topic.id }}">{{ topic.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="field-row">
+      <label>Баллы
+        <input type="number" name="score" min="0" max="1000" required />
+      </label>
+      <label>Максимум
+        <input type="number" name="max_score" min="1" max="1000" required />
+      </label>
+    </div>
+    <button class="button secondary" type="submit">Сохранить результат</button>
+    <p class="form-status" data-form-status></p>
+    <div class="stack-list compact">
+      {% for quiz in quizzes[:4] %}
+      <article class="note-card">
+        <p>{{ quiz.score }}/{{ quiz.max_score }}</p>
+        <small>{{ quiz.attempted_at.date() }}</small>
+        <button
+          class="button ghost compact-button"
+          type="button"
+          data-delete-endpoint="/api/quizzes/{{ quiz.id }}"
+          data-redirect-url="/courses/{{ course.id }}?message=%D0%A0%D0%B5%D0%B7%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%82%20%D1%83%D0%B4%D0%B0%D0%BB%D1%91%D0%BD."
+          data-confirm-text="Удалить результат?"
+        >
+          Удалить результат
+        </button>
+      </article>
+      {% else %}
+      <div class="empty-state">
+        <strong>Самопроверок пока нет</strong>
+        <p>Добавьте результат, чтобы обновить освоение темы и качество плана.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+  {% else %}
+  <section class="panel">
+    <h2>Записать учебную сессию</h2>
+    <div class="empty-state">
+      <strong>Пока недоступно</strong>
+      <p>Сначала добавьте хотя бы одну тему.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Добавить самопроверку</h2>
+    <div class="empty-state">
+      <strong>Пока недоступно</strong>
+      <p>Сначала добавьте хотя бы одну тему.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="panel">
+    <h2>Комментарии наставника</h2>
+    <div class="stack-list compact">
+      {% for comment in comments %}
+      <article class="note-card">
+        <p>{{ comment.body }}</p>
+        <small>наставник #{{ comment.author_id }}</small>
+        <button
+          class="button ghost compact-button"
+          type="button"
+          data-delete-endpoint="/api/comments/{{ comment.id }}"
+          data-redirect-url="/courses/{{ course.id }}?message=%D0%9A%D0%BE%D0%BC%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D1%80%D0%B8%D0%B9%20%D1%83%D0%B4%D0%B0%D0%BB%D1%91%D0%BD."
+          data-confirm-text="Удалить комментарий?"
+        >
+          Удалить комментарий
+        </button>
+      </article>
+      {% else %}
+      <div class="empty-state">
+        <strong>Комментариев пока нет</strong>
+        <p>Когда наставник добавит рекомендации, они появятся здесь.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

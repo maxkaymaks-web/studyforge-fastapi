@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div>
+    <p class="eyebrow">Сгенерированный план</p>
+    <h1>{{ course.title }}</h1>
+    <p class="lead">Сфокусированный план на {{ days }} дней с учётом пробелов в знаниях, давности повторения, важности темы и результатов самопроверки.</p>
+  </div>
+  <div class="metrics-row">
+    <article class="metric-box">
+      <span>Сессий в плане</span>
+      <strong>{{ plan.summary.total_recommendations }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Всего минут</span>
+      <strong>{{ plan.summary.total_recommended_minutes }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Дата экзамена</span>
+      <strong>{{ plan.summary.exam_date }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Средняя нагрузка в день</span>
+      <strong>{{ plan.summary.average_daily_minutes }} мин</strong>
+    </article>
+    <article class="metric-box">
+      <span>Дней до экзамена</span>
+      <strong>{{ plan.summary.days_until_exam }}</strong>
+    </article>
+  </div>
+  <div class="planner-toolbar">
+    <form class="planner-controls" method="get">
+      <label>Горизонт плана
+        <select name="days">
+          {% for option in range(1, 15) %}
+          <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} дн.</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="button secondary" type="submit">Пересчитать</button>
+    </form>
+    <a class="button ghost" href="{{ export_url }}">Экспорт CSV</a>
+  </div>
+</section>
+
+<section class="grid two">
+  <section class="panel chart-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Распределение</p>
+        <h2>Нагрузка по дням</h2>
+      </div>
+    </div>
+    <div class="bar-chart">
+      {% for point in planner_visualization.daily_load %}
+      <article class="bar-column">
+        <div class="bar-track">
+          <div class="bar-fill" style="height: {{ point.height_percent }}%"></div>
+        </div>
+        <strong>{{ point.minutes }} мин</strong>
+        <small>{{ point.label }}</small>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel projection-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Forecast</p>
+        <h2>Прогноз готовности</h2>
+      </div>
+      <span class="status-badge {{ planner_visualization.projected_readiness_tone }}">{{ planner_visualization.projected_readiness_label }}</span>
+    </div>
+    <div class="projection-stat">{{ planner_visualization.projected_readiness_percent }}%</div>
+    <p class="lead compact-lead">Если выдержать текущий план, курс прибавит ещё {{ planner_visualization.projected_delta }} п.п. готовности.</p>
+    <div class="note-card action-note">
+      <strong>Что это значит</strong>
+      <p>План уже распределён по дням, поэтому можно сразу переносить блоки в фактические учебные сессии и закрывать самые приоритетные темы.</p>
+    </div>
+  </section>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Навигация</p>
+      <h2>Легенда приоритетов</h2>
+    </div>
+  </div>
+  <div class="legend-row">
+    <span class="status-badge risk">Критический</span>
+    <span class="status-badge attention">Высокий</span>
+    <span class="status-badge good">Средний</span>
+    <span class="status-badge soft">Поддерживающий</span>
+  </div>
+</section>
+
+<section class="plan-list">
+  {% for item in plan.recommendations %}
+  <article class="plan-card">
+    <div class="plan-date">{{ item.planned_for }}</div>
+    <div class="plan-body">
+      <strong>{{ item.topic_title }}</strong>
+      <p>{{ item.reason }}</p>
+    </div>
+    <div class="plan-meta">
+      <span>{{ item.recommended_minutes }} мин</span>
+      <small>Индекс приоритета</small>
+      <strong>{{ item.priority_score }}</strong>
+      <span class="status-badge {{ item.priority_score|priority_tone }}">{{ item.priority_score|priority_label }}</span>
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state">
+    <strong>Рекомендаций пока нет</strong>
+    <p>Добавьте темы в курс, и планировщик заполнит эту страницу.</p>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

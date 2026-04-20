@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Подготовка без хаоса</p>
+    <h1>Превратите разрозненные темы в понятный план подготовки.</h1>
+    <p class="lead">
+      StudyForge помогает студентам структурировать курсы, фиксировать учебные сессии,
+      отслеживать результаты самопроверки и получать практический план на каждый день.
+    </p>
+    <div class="hero-actions">
+      {% if current_user %}
+      <a class="button primary" href="/dashboard">Открыть панель</a>
+      {% else %}
+      <a class="button primary" href="/register">Начать работу</a>
+      <a class="button secondary" href="/login">Войти в аккаунт</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hero-panel">
+    <div class="metric-card">
+      <span>Умный план на каждый день</span>
+      <strong>Система подсказывает, что учить сейчас, чтобы не проваливать слабые и срочные темы</strong>
+    </div>
+    <div class="metric-card">
+      <span>Прогресс без ручных таблиц</span>
+      <strong>Курсы, темы, сессии, самопроверки и заметки собраны в одном понятном интерфейсе</strong>
+    </div>
+    <div class="metric-card">
+      <span>Подготовка как реальный процесс</span>
+      <strong>История занятий, аналитика, дедлайны и заметки помогают держать курс до экзамена</strong>
+    </div>
+  </div>
+</section>
+
+<section class="grid three">
+  <article class="feature-card">
+    <h2>Рабочее пространство курса</h2>
+    <p>Управляйте курсами, темами, учебными сессиями и результатами самопроверки в одной связанной системе.</p>
+  </article>
+  <article class="feature-card">
+    <h2>Адаптивный планировщик</h2>
+    <p>Формируйте план, который поднимает вверх слабые темы, просроченные повторения и самые важные блоки.</p>
+  </article>
+  <article class="feature-card">
+    <h2>Режим наставника</h2>
+    <p>Получайте комментарии преподавателя или наставника и показывайте более сильную бизнес-логику на защите.</p>
+  </article>
+</section>
+{% endblock %}

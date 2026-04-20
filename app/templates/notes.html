@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard-header notes-hero">
+  <div>
+    <p class="eyebrow">База знаний</p>
+    <h1>Заметки</h1>
+    <p class="lead">Личное пространство заметок в духе Apple Notes: папки, закреплённые записи, быстрые конспекты и привязка к курсам.</p>
+  </div>
+  <div class="hero-actions">
+    <button
+      class="button primary"
+      id="note-create-button"
+      type="button"
+      {% if selected_folder_id %}data-folder-id="{{ selected_folder_id }}"{% endif %}
+      {% if selected_course_id %}data-course-id="{{ selected_course_id }}"{% endif %}
+    >
+      Новая заметка
+    </button>
+    {% if selected_course_id %}
+    <a class="button ghost" href="/courses/{{ selected_course_id }}">Назад к курсу</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="notes-layout">
+  <aside class="panel notes-sidebar">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Навигация</p>
+        <h2>Папки</h2>
+      </div>
+    </div>
+    <div class="folder-list">
+      <a class="folder-link {% if not selected_folder_id and not selected_course_id %}active{% endif %}" href="/notes">
+        <span>Все заметки</span>
+        <strong>{{ all_notes_count }}</strong>
+      </a>
+      {% for folder in folders %}
+      <a class="folder-link {% if selected_folder_id == folder.id %}active{% endif %}" href="/notes?folder_id={{ folder.id }}">
+        <span>{{ folder.name }}</span>
+        <strong>{{ folder_counts.get(folder.id, 0) }}</strong>
+      </a>
+      {% endfor %}
+    </div>
+    <form id="folder-create-form" class="notes-inline-form">
+      <label>Новая папка
+        <input type="text" name="name" minlength="2" required placeholder="Например, Лекции" />
+      </label>
+      <button class="button secondary" type="submit">Создать папку</button>
+      <p class="form-status" data-form-status></p>
+    </form>
+    {% if selected_folder_id %}
+    <button
+      class="button danger"
+      type="button"
+      data-delete-endpoint="/api/note-folders/{{ selected_folder_id }}"
+      data-redirect-url="/notes?message=%D0%9F%D0%B0%D0%BF%D0%BA%D0%B0%20%D1%83%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B0."
+      data-confirm-text="Удалить папку? Заметки сохранятся."
+    >
+      Удалить папку
+    </button>
+    {% endif %}
+  </aside>
+
+  <section class="panel notes-list-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Лента</p>
+        <h2>Закреплённые</h2>
+      </div>
+    </div>
+    <form class="search-form" method="get">
+      {% if selected_folder_id %}
+      <input type="hidden" name="folder_id" value="{{ selected_folder_id }}" />
+      {% endif %}
+      {% if selected_course_id %}
+      <input type="hidden" name="course_id" value="{{ selected_course_id }}" />
+      {% endif %}
+      <input type="search" name="q" value="{{ search_query }}" placeholder="Поиск по заголовку и тексту" />
+      <button class="button ghost" type="submit">Найти</button>
+    </form>
+    <div class="note-list">
+      {% for note in pinned_notes %}
+      <a class="note-row tone-{{ note.color_tone }} {% if selected_note and selected_note.id == note.id %}active{% endif %}" href="/notes?note_id={{ note.id }}{% if selected_folder_id %}&folder_id={{ selected_folder_id }}{% endif %}{% if selected_course_id %}&course_id={{ selected_course_id }}{% endif %}">
+        <div class="note-row-head">
+          <strong>{{ note.title }}</strong>
+          <span class="status-badge attention">Закреплено</span>
+        </div>
+        <p>{{ note.body[:120] }}</p>
+        <small>{{ note.updated_at.date() }}</small>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <strong>Закреплённых заметок пока нет</strong>
+        <p>Закрепляйте ключевые конспекты, чтобы держать их вверху списка.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Все записи</p>
+        <h2>Остальные заметки</h2>
+      </div>
+    </div>
+    <div class="note-list">
+      {% for note in regular_notes %}
+      <a class="note-row tone-{{ note.color_tone }} {% if selected_note and selected_note.id == note.id %}active{% endif %}" href="/notes?note_id={{ note.id }}{% if selected_folder_id %}&folder_id={{ selected_folder_id }}{% endif %}{% if selected_course_id %}&course_id={{ selected_course_id }}{% endif %}">
+        <div class="note-row-head">
+          <strong>{{ note.title }}</strong>
+          <small>{{ note.updated_at.date() }}</small>
+        </div>
+        <p>{{ note.body[:120] }}</p>
+        <div class="course-card-meta">
+          {% if note.course %}
+          <span>{{ note.course.title }}</span>
+          {% endif %}
+          {% if note.topic %}
+          <span>{{ note.topic.title }}</span>
+          {% endif %}
+        </div>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <strong>Список пока пуст</strong>
+        <p>Создайте первую заметку, чтобы справа появился полноценный редактор.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel notes-editor-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Редактор</p>
+        <h2>Редактор заметки</h2>
+      </div>
+    </div>
+    {% if selected_note %}
+    <form id="note-update-form" class="notes-editor-form" data-note-id="{{ selected_note.id }}">
+      <label>Заголовок
+        <input type="text" name="title" value="{{ selected_note.title }}" minlength="2" required />
+      </label>
+      <label>Текст заметки
+        <textarea name="body" minlength="2" required>{{ selected_note.body }}</textarea>
+      </label>
+      <div class="field-row">
+        <label>Папка
+          <select name="folder_id">
+            <option value="">Без папки</option>
+            {% for folder in folders %}
+            <option value="{{ folder.id }}" {% if selected_note.folder_id == folder.id %}selected{% endif %}>{{ folder.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Курс
+          <select name="course_id">
+            <option value="">Без курса</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}" {% if selected_note.course_id == course.id %}selected{% endif %}>{{ course.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Тема
+          <select name="topic_id">
+            <option value="">Без темы</option>
+            {% for topic in topics %}
+            <option value="{{ topic.id }}" {% if selected_note.topic_id == topic.id %}selected{% endif %}>{{ topic.title }} · {{ topic.course.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="field-row notes-controls">
+        <label>Тон карточки
+          <select name="color_tone">
+            <option value="sunny" {% if selected_note.color_tone == "sunny" %}selected{% endif %}>Солнечный</option>
+            <option value="mint" {% if selected_note.color_tone == "mint" %}selected{% endif %}>Мятный</option>
+            <option value="lavender" {% if selected_note.color_tone == "lavender" %}selected{% endif %}>Лавандовый</option>
+            <option value="rose" {% if selected_note.color_tone == "rose" %}selected{% endif %}>Розовый</option>
+          </select>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" name="is_pinned" {% if selected_note.is_pinned %}checked{% endif %} />
+          Закрепить заметку
+        </label>
+      </div>
+      <div class="action-row">
+        <button class="button primary" type="submit">Сохранить заметку</button>
+        <button
+          class="button danger"
+          type="button"
+          data-delete-endpoint="/api/notes/{{ selected_note.id }}"
+          data-redirect-url="/notes?message=%D0%97%D0%B0%D0%BC%D0%B5%D1%82%D0%BA%D0%B0%20%D1%83%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B0."
+          data-confirm-text="Удалить заметку?"
+        >
+          Удалить заметку
+        </button>
+      </div>
+      <p class="form-status" data-form-status></p>
+    </form>
+    {% else %}
+    <div class="empty-state notes-empty">
+      <strong>Выберите заметку или создайте новую</strong>
+      <p>Список заметок находится в центре. Новая заметка появится здесь сразу после создания.</p>
+    </div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

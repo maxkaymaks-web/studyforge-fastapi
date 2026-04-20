@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="auth-shell">
+  <form id="login-form" class="auth-card">
+    <p class="eyebrow">С возвращением</p>
+    <h1>Войдите в своё учебное пространство</h1>
+    <label>Почта
+      <input type="email" name="email" required />
+    </label>
+    <label>Пароль
+      <input type="password" name="password" minlength="8" required />
+    </label>
+    <button class="button primary" type="submit">Войти</button>
+    <p class="form-status" data-form-status></p>
+  </form>
+</section>
+{% endblock %}

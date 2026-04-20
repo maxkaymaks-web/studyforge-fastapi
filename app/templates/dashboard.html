@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div>
+    <p class="eyebrow">Личный кабинет</p>
+    <h1>{{ current_user.full_name }}</h1>
+    <p class="lead">Отслеживайте нагрузку по курсам, покрытие тем и готовность к ближайшим экзаменам.</p>
+  </div>
+  <div class="metrics-row">
+    <article class="metric-box">
+      <span>Курсы</span>
+      <strong>{{ course_snapshots|length }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Темы</span>
+      <strong>{{ total_topics }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Среднее освоение</span>
+      <strong>{{ avg_mastery }}%</strong>
+    </article>
+    <article class="metric-box">
+      <span>Попытки самопроверки</span>
+      <strong>{{ total_quizzes }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Серия дней</span>
+      <strong>{{ dashboard_insights.streak_days }}</strong>
+    </article>
+    <article class="metric-box">
+      <span>Индекс устойчивости</span>
+      <strong>{{ dashboard_insights.health_score }}%</strong>
+    </article>
+  </div>
+</section>
+
+<section class="grid three cockpit-grid">
+  <section class="panel signal-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ритм</p>
+        <h2>Серия учебных дней</h2>
+      </div>
+      <span class="status-badge {{ dashboard_insights.health_tone }}">{{ dashboard_insights.health_label }}</span>
+    </div>
+    <div class="big-stat">{{ dashboard_insights.streak_days }}</div>
+    <p class="lead compact-lead">Подряд активных дней с сохранёнными учебными сессиями.</p>
+    <div class="signal-grid">
+      <article class="signal-chip">
+        <span>Индекс устойчивости</span>
+        <strong>{{ dashboard_insights.health_score }}%</strong>
+      </article>
+      <article class="signal-chip">
+        <span>Минут за 7 дней</span>
+        <strong>{{ dashboard_insights.weekly_load | sum(attribute='minutes') }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Нагрузка</p>
+        <h2>Подготовка по неделе</h2>
+      </div>
+    </div>
+    <div class="bar-chart">
+      {% for point in dashboard_insights.weekly_load %}
+      <article class="bar-column {% if point.is_today %}active{% endif %}">
+        <div class="bar-track">
+          <div class="bar-fill" style="height: {{ point.height_percent }}%"></div>
+        </div>
+        <strong>{{ point.minutes }}</strong>
+        <small>{{ point.label }}</small>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Динамика</p>
+        <h2>История самопроверки</h2>
+      </div>
+    </div>
+    {% if dashboard_insights.quiz_trend %}
+    <div class="bar-chart trend-chart">
+      {% for point in dashboard_insights.quiz_trend %}
+      <article class="bar-column">
+        <div class="bar-track">
+          <div class="bar-fill accent-fill" style="height: {{ point.height_percent }}%"></div>
+        </div>
+        <strong>{{ point.value }}%</strong>
+        <small>{{ point.label }}</small>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>История появится после первой самопроверки</strong>
+      <p>Когда вы добавите результаты тестов, здесь появится график динамики.</p>
+    </div>
+    {% endif %}
+  </section>
+</section>
+
+<section class="grid two">
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Прогресс</p>
+        <h2>Достижения</h2>
+      </div>
+    </div>
+    <div class="achievement-grid">
+      {% for achievement in dashboard_insights.achievements %}
+      <article class="achievement-card {{ achievement.tone }}">
+        <strong>{{ achievement.title }}</strong>
+        <p>{{ achievement.description }}</p>
+      </article>
+      {% else %}
+      <div class="empty-state">
+        <strong>Достижения ещё не сформированы</strong>
+        <p>Продолжайте сессии и самопроверки, чтобы система начала отмечать этапы роста.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ближайшие события</p>
+        <h2>Ближайшие дедлайны</h2>
+      </div>
+    </div>
+    <div class="stack-list compact">
+      {% for deadline in dashboard_insights.upcoming_deadlines %}
+      <a class="note-card deadline-card" href="/courses/{{ deadline.course_id }}">
+        <div class="course-card-top">
+          <strong>{{ deadline.course_title }}</strong>
+          <span class="status-badge {{ deadline.tone }}">Готовность {{ deadline.readiness_percent }}%</span>
+        </div>
+        <p>Экзамен {{ deadline.exam_date }}</p>
+        <small>До контрольной точки осталось {{ deadline.days_until_exam }} дн.</small>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <strong>Дедлайнов пока нет</strong>
+        <p>После создания курсов с датой экзамена здесь появится таймлайн.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Под риском</p>
+      <h2>Риск по курсам</h2>
+    </div>
+  </div>
+  <div class="course-list risk-list">
+    {% for risk in dashboard_insights.course_risks %}
+    <a class="course-card professional-course risk-surface" href="/courses/{{ risk.course_id }}">
+      <div class="course-card-top">
+        <strong>{{ risk.course_title }}</strong>
+        <span class="status-badge {{ risk.tone }}">Риск {{ risk.risk_score }}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: {{ 100 - risk.risk_score }}%"></div>
+      </div>
+      <div class="course-card-meta">
+        <span>Готовность {{ risk.readiness_percent }}%</span>
+        <span>Слабых тем {{ risk.weak_topics_count }}</span>
+        <span>{{ risk.days_until_exam }} дн. до экзамена</span>
+      </div>
+    </a>
+    {% else %}
+    <div class="empty-state">
+      <strong>Риски появятся после добавления курсов</strong>
+      <p>Здесь будет список направлений, которые требуют вмешательства в первую очередь.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="grid two">
+  <form id="course-create-form" class="panel form-panel">
+    <h2>Создать курс</h2>
+    <label>Название
+      <input type="text" name="title" required minlength="2" />
+    </label>
+    <label>Описание
+      <textarea name="description" required minlength="2"></textarea>
+    </label>
+    <div class="field-row">
+      <label>Дата экзамена
+        <input type="date" name="exam_date" required />
+      </label>
+      <label>Целевой балл
+        <input type="number" name="target_score" min="1" max="100" required />
+      </label>
+    </div>
+    <div class="field-row">
+      <label>Часов в неделю
+        <input type="number" name="weekly_hours_goal" min="1" max="80" required />
+      </label>
+      <label>Цветовая тема
+        <input type="text" name="color_theme" value="emerald" required />
+      </label>
+    </div>
+    <button class="button primary" type="submit">Добавить курс</button>
+    <p class="form-status" data-form-status></p>
+  </form>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ежедневная рекомендация</p>
+        <h2>Фокус на сегодня</h2>
+      </div>
+    </div>
+    {% if focus_today %}
+    <article class="focus-card">
+      <span class="course-chip">{{ focus_today.course_title }}</span>
+      <strong>{{ focus_today.topic_title }}</strong>
+      <p>{{ focus_today.reason }}</p>
+      <div class="focus-meta">
+        <span>{{ focus_today.recommended_minutes }} мин</span>
+        <span>Приоритет {{ focus_today.priority_score }}</span>
+      </div>
+      <div class="action-row">
+        <a class="button secondary" href="/courses/{{ focus_today.course_id }}">Открыть курс</a>
+        <a class="button ghost" href="/planner/{{ focus_today.course_id }}">Открыть план</a>
+      </div>
+    </article>
+    {% else %}
+    <div class="empty-state">
+      <strong>Фокус ещё не рассчитан</strong>
+      <p>Добавьте курс и хотя бы одну тему, чтобы получить рекомендацию на сегодня.</p>
+    </div>
+    {% endif %}
+  </section>
+</section>
+
+<section class="grid two">
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ваши траектории</p>
+        <h2>Курсы</h2>
+      </div>
+    </div>
+    <div class="course-list">
+      {% for snapshot in course_snapshots %}
+      <a class="course-card professional-course" href="/courses/{{ snapshot.course_id }}">
+        <div class="course-card-top">
+          <span class="course-chip">Экзамен {{ snapshot.exam_date.strftime("%d.%m") }}</span>
+          <span class="status-badge {{ snapshot.readiness_tone }}">Готовность {{ snapshot.readiness_percent }}%</span>
+        </div>
+        <strong>{{ snapshot.title }}</strong>
+        <small>Экзамен через {{ snapshot.days_until_exam }} дн. · {{ snapshot.readiness_label }}</small>
+        <div class="course-card-meta">
+          <span>Слабых тем: {{ snapshot.weak_topics_count }}</span>
+          <span>Минут занятий: {{ snapshot.total_study_minutes }}</span>
+        </div>
+        <small>Следующий фокус: {{ snapshot.next_focus_topic_title or "Добавьте темы для плана" }}</small>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <strong>Курсов пока нет</strong>
+        <p>Создайте первый курс, и панель начнёт заполняться данными.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Риски подготовки</p>
+        <h2>Критические темы</h2>
+      </div>
+    </div>
+    <div class="stack-list compact">
+      {% for item in critical_topics %}
+      <a class="note-card risk-card" href="/courses/{{ item.course_id }}">
+        <strong>{{ item.topic_title }}</strong>
+        <p>{{ item.course_title }}</p>
+        <div class="course-card-meta">
+          <span>Освоение: {{ item.mastery_level }}%</span>
+          <span>Приоритет: {{ item.priority_score }}</span>
+        </div>
+        <small>До экзамена {{ item.days_until_exam }} дн.</small>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <strong>Критических тем пока нет</strong>
+        <p>Когда появятся темы, система покажет самые рискованные блоки.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

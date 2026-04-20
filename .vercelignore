@@ -1,0 +1,12 @@
+.git
+.venv
+.pytest_cache
+.coverage
+htmlcov
+docs
+tests
+*.db
+*.sqlite3
+*.log
+Dockerfile
+.dockerignore

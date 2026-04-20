@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+*.log
+Проект_ Разработка веб-приложения на FastAPI.pdf
+
+.vercel

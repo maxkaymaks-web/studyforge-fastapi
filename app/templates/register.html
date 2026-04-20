@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="auth-shell">
+  <form id="register-form" class="auth-card">
+    <p class="eyebrow">Создание аккаунта</p>
+    <h1>Настройте своё пространство StudyForge</h1>
+    <label>Полное имя
+      <input type="text" name="full_name" minlength="2" required />
+    </label>
+    <label>Почта
+      <input type="email" name="email" required />
+    </label>
+    <label>Пароль
+      <input type="password" name="password" minlength="8" required />
+    </label>
+    <label>Роль
+      <select name="role">
+        <option value="student">Студент</option>
+        <option value="mentor">Наставник</option>
+      </select>
+    </label>
+    <button class="button primary" type="submit">Зарегистрироваться</button>
+    <p class="form-status" data-form-status></p>
+  </form>
+</section>
+{% endblock %}
